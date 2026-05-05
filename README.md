@@ -1,93 +1,137 @@
-# yash-m2m
+# yash-m2m: Multi-Modal Analysis of Clear Cell Renal Cell Carcinoma (ccRCC) Subtypes
 
+This repository contains code and data for analyzing multi-modal features (genomic mutations, tumor mutation burden, whole slide image features) to classify clear cell renal cell carcinoma (ccRCC) subtypes, specifically distinguishing between ccA-only, ccB-only, shared ccA/B, and non-ccA/B cases.
 
+## Project Overview
 
-## Getting started
+The project focuses on:
+- **Gene Selection and Classification**: Using functional gene mutations and TMB to predict ccRCC subtypes
+- **Stratified Analysis**: Evaluating model performance across different patient strata
+- **Correlation Analysis**: Investigating relationships between genomic and imaging features
+- **Whole Slide Image (WSI) Feature Analysis**: Leveraging deep learning-extracted features from histology images
+- **Multi-Modal Integration**: Combining genomic, clinical, and imaging data for improved classification
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Data Description
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+The dataset includes:
+- **Clinical Data**: Patient demographics, tumor stage, vital status
+- **Genomic Data**: Functional mutations in cancer-related genes (e.g., VHL, PBRM1, SETD2)
+- **Tumor Mutation Burden (TMB)**: Quantitative measure of mutation load
+- **WSI Features**: Pre-extracted features from whole slide images using deep learning models
+- **Gene Expression Data**: RNA-seq data for select genes
+- **Imaging Data**: CT, MRI, and WSI patient files
 
-## Add your files
+Data is organized in the `Data/` directory with subfolders for different modalities.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Repository Structure
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.m2m.bio/m2m-bio/apm-oncoselect/yash-m2m.git
-git branch -M main
-git push -uf origin main
+yash-m2m/
+├── Code/                          # Jupyter notebooks for analysis
+│   ├── analysis.ipynb            # Main gene selection and classification
+│   ├── analysis_MYC.ipynb        # MYC-related analysis
+│   ├── analysis_stratified.ipynb # Stratified model evaluation
+│   ├── analysis_WSI.ipynb        # WSI feature analysis
+│   ├── analysis_WSI_MYC.ipynb    # Combined WSI and MYC analysis
+│   ├── correlation.ipynb         # Feature correlation analysis
+│   └── data_processing.ipynb     # Data preprocessing scripts
+├── Data/                          # Dataset files
+│   ├── clinical+genomic_split.csv
+│   ├── full_data_table.csv
+│   ├── Features/
+│   │   ├── WSI Features/         # .npz files with WSI features
+│   │   └── Gene expressions/     # Gene expression data
+│   └── Patient files/            # CT/MRI/WSI patient metadata
+└── Last_internship/               # Previous internship work
+    └── onco-select/               # Oncology selection analysis
 ```
 
-## Integrate with your tools
+## Installation and Setup
 
-- [ ] [Set up project integrations](https://gitlab.m2m.bio/m2m-bio/apm-oncoselect/yash-m2m/-/settings/integrations)
+### Using Docker (Recommended)
 
-## Collaborate with your team
+A multi-stage Dockerfile is provided for containerized execution:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```dockerfile
+# Install dependencies into a local folder
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-## Test and Deploy
+# --- Stage 2: Final Runtime ---
+FROM python:3.11-slim
 
-Use the built-in continuous integration in GitLab.
+WORKDIR /app
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+# Copy only the installed packages from the builder stage
+COPY --from=builder /root/.local /root/.local
+COPY . .
 
-***
+# Ensure the local bin is in the PATH
+ENV PATH=/root/.local/bin:$PATH
+# Optimization for ML: prevent heavy logging and pyc files
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Editing this README
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+CMD ["tail", "-f", "/dev/null"]
+```
 
-## Suggestions for a good README
+To build and run:
+```bash
+docker build -t yash-m2m .
+docker run -it --rm -v $(pwd):/app yash-m2m
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Local Setup
 
-## Name
-Choose a self-explaining name for your project.
+1. **Prerequisites**:
+   - Python 3.11+
+   - Git
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+2. **Install Dependencies**:
+   ```bash
+   pip install pandas numpy matplotlib scikit-learn jupyter
+   ```
+   *Note: A `requirements.txt` file is referenced in the Dockerfile but not present in the repository. The above packages are inferred from the analysis notebooks.*
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+3. **Clone the Repository**:
+   ```bash
+   git clone https://gitlab.m2m.bio/m2m-bio/apm-oncoselect/yash-m2m.git
+   cd yash-m2m
+   ```
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+1. **Data Preparation**: Ensure data files are in the `Data/` directory
+2. **Run Analysis Notebooks**: Use Jupyter to execute the notebooks in `Code/`
+   ```bash
+   jupyter notebook
+   ```
+3. **Key Analyses**:
+   - `analysis.ipynb`: Gene-based classification pipeline
+   - `analysis_WSI.ipynb`: WSI feature analysis
+   - `correlation.ipynb`: Feature correlation studies
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## Key Findings
+
+- Genomic mutations (particularly in chromatin remodeling genes) are predictive of ccRCC subtypes
+- WSI features provide complementary information to genomic data
+- Multi-modal approaches improve classification accuracy over single-modality models
+
+## Environment Details
+
+- **Python Version**: 3.11
+- **Base Image**: python:3.11-slim
+- **Key Libraries**: pandas, numpy, scikit-learn, matplotlib
+- **ML Optimizations**: PYTHONDONTWRITEBYTECODE=1, PYTHONUNBUFFERED=1 for performance
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+This is a research project. For contributions or questions, please contact the repository maintainer.
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+[Add license information if applicable]
