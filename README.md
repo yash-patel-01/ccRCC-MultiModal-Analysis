@@ -128,10 +128,3 @@ docker run -it --rm -v $(pwd):/app yash-m2m
 - **Key Libraries**: pandas, numpy, scikit-learn, matplotlib
 - **ML Optimizations**: PYTHONDONTWRITEBYTECODE=1, PYTHONUNBUFFERED=1 for performance
 
-## Contributing
-
-This is a research project. For contributions or questions, please contact the repository maintainer.
-
-## License
-
-[Add license information if applicable]
